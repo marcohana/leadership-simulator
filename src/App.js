@@ -5,10 +5,10 @@ const NAMES=["Camille","Dominique","Claude","Alix","Sacha","Morgan","Andréa","N
 const MALE_VOICES=["Enceladus","Charon","Fenrir","Orus","Puck","Iapetus"];
 const FEMALE_VOICES=["Aoede","Kore","Leda","Callirrhoe","Despina","Erinome"];
 const P={
-M1:{l:"M1 – Compétence faible, Motivation haute",s:"S1",sn:"Diriger",b:`Tu es nouveau. Tu ne parles PAS technique. Tu exprimes enthousiasme et inquiétude: "par quoi je commence?","je suis perdu". Besoin qu'on te prenne par la main. 1-2 phrases courtes max.`},
-M2:{l:"M2 – Compétence en développement, Motivation fluctuante",s:"S2",sn:"Coacher",b:`Tu as quelques repères mais tu doutes. Tu proposes puis doutes: "je pensais faire ça, mais bon...". Alternes énergie et doute. Pas de jargon. 1-2 phrases max.`},
-M3:{l:"M3 – Compétence haute, Motivation basse",s:"S3",sn:"Soutenir",b:`Tu sais faire mais plus envie. Réponses sèches: "oui oui","je sais". Si le manager donne des instructions basiques, agacé. S'il reconnaît ta valeur, tu t'ouvres. 1-2 phrases max.`},
-M4:{l:"M4 – Compétence haute, Motivation haute",s:"S4",sn:"Déléguer",b:`Enthousiaste avec des propositions. Tu veux le feu vert: "j'ai réfléchi","je gère". Si on te micro-manage, agacé. 1-2 phrases max.`}};
+M1:{l:"M1 – Compétence faible, Motivation haute",s:"S1",sn:"Diriger",b:`Tu es nouveau. Tu ne parles PAS technique. Tu exprimes enthousiasme et inquiétude: "par quoi je commence?","je suis perdu". Besoin qu'on te prenne par la main. 1 seule phrase courte max.`},
+M2:{l:"M2 – Compétence en développement, Motivation fluctuante",s:"S2",sn:"Coacher",b:`Tu as quelques repères mais tu doutes. Tu proposes puis doutes: "je pensais faire ça, mais bon...". Alternes énergie et doute. Pas de jargon. 1 seule phrase courte max.`},
+M3:{l:"M3 – Compétence haute, Motivation basse",s:"S3",sn:"Soutenir",b:`Tu sais faire mais plus envie. Réponses sèches: "oui oui","je sais". Si le manager donne des instructions basiques, agacé. S'il reconnaît ta valeur, tu t'ouvres. 1 seule phrase courte max.`},
+M4:{l:"M4 – Compétence haute, Motivation haute",s:"S4",sn:"Déléguer",b:`Enthousiaste avec des propositions. Tu veux le feu vert: "j'ai réfléchi","je gère". Si on te micro-manage, agacé. 1 seule phrase courte max.`}};
 const SIT=["Un fournisseur annonce une grosse augmentation de prix. Il faut trouver une solution.","On lance un produit et il faut trouver des fournisseurs dans un nouveau pays.","Un audit a trouvé des problèmes dans la validation des commandes.","La direction demande -10% sur les coûts sans baisser la qualité.","Un fournisseur clé est en difficulté financière et risque de ne plus livrer.","On change de logiciel et le module achats doit être prêt en 1 mois.","Désaccord avec l'équipe qualité sur le choix des fournisseurs.","Mettre en place des achats responsables avec les fournisseurs."];
 const TT={M1:"Acheteur junior, 2 mois",M2:"Acheteur, 1 an",M3:"Acheteur senior, 8 ans",M4:"Resp. achats, 12 ans"};
 
@@ -21,7 +21,7 @@ function gen(){
   return{name,mat,sit,p:P[mat],title:TT[mat],voice,isMale};
 }
 
-function sysPr(s){return`Tu es ${s.name}, ${s.title}, département achats.\nPROFIL SECRET: ${s.mat} (${s.p.l})\nCOMPORTEMENT: ${s.p.b}\nSITUATION: ${s.sit}\nRÈGLES: Ne révèle JAMAIS ton profil. Parle naturellement. Réponses TRÈS COURTES: 1-2 phrases max, comme une vraie conversation au bureau. INTERDIT: jargon, technique, acronymes. Parle de ton vécu et émotions. Réagis au style du manager. Ne mentionne jamais simulation/leadership/Hersey. Premier message: présente-toi et la situation en 2-3 phrases simples.`}
+function sysPr(s){return`Tu es ${s.name}, ${s.title}, département achats.\nPROFIL SECRET: ${s.mat} (${s.p.l})\nCOMPORTEMENT: ${s.p.b}\nSITUATION: ${s.sit}\nRÈGLES: Ne révèle JAMAIS ton profil. Réponses ULTRA COURTES: 1 seule phrase max. Parle comme au bureau. INTERDIT: jargon, technique, acronymes. Parle de ton vécu et émotions. Réagis au style du manager. Ne mentionne jamais simulation/leadership/Hersey. Premier message: présente-toi et la situation en 1-2 phrases.`}
 
 function debPr(s,ms){const c=ms.map(m=>`${m.role==="user"?"MANAGER":s.name.toUpperCase()}: ${m.content}`).join("\n"),mc=ms.filter(m=>m.role==="user").length;
 return`Expert leadership situationnel Hersey & Blanchard.\nINFOS: ${s.name}, ${s.title}, ${s.mat} (${s.p.l}), Style idéal: ${s.p.s} – ${s.p.sn}\nSituation: ${s.sit}\nCONVERSATION (${mc} msgs manager):\n${c}\n\nRéponds UNIQUEMENT JSON valide. Pas de texte/backticks. Structure:\n{"noteGlobale":12,"styleDetecte":"S2","styleNomDetecte":"Coacher","styleIdeal":"${s.p.s}","styleNomIdeal":"${s.p.sn}","maturityReveal":"${s.mat}","maturityExplication":"...","analyseGenerale":"...","pointsForts":["..."],"pointsAmelioration":["..."],"exemplesDialogueBons":[{"citation":"...","pourquoi":"..."}],"exemplesDialogueMauvais":[{"citation":"...","pourquoi":"..."}],"exemplesIdeal":[{"situation":"...","aurait_du_dire":"..."}],"conseilFinal":"..."}\nBARÈME: Style inadapté=2-8. Adjacent=8-13. Bon+maladresses=13-16. Parfait=16-20. MALUS -3/-5 si <4 msgs. MALUS si 0 questions. 15+ RARE. Impose sans écouter=max 10. SÉVÈRE.`}
@@ -120,7 +120,7 @@ const stopMic=useCallback(()=>{rR.current?.stop()},[]);
 const send=useCallback(async(text)=>{const t=(text||inp).trim();if(!t||ld)return;setInp("");setTr("");
 const nm=[...ms,{role:"user",content:t}];setMs(nm);setLd(true);setErr(null);
 try{let am=nm.filter(m=>!m.hidden).map(m=>({role:m.role,content:m.content}));if(am[0]?.role==="assistant")am=[{role:"user",content:"(début)"},...am];
-const r=await apiChat(sR.current,am,250);setMs(p=>[...p,{role:"assistant",content:r}]);
+const r=await apiChat(sR.current,am,120);setMs(p=>[...p,{role:"assistant",content:r}]);
 if(voiceOut){setSpk(true);try{await apiTTSStream(r,scRef.current?.voice,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
 catch(e){setErr("Erreur de connexion.")}
 setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,voiceOut,voiceIn]);
