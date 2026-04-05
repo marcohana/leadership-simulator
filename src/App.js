@@ -37,9 +37,6 @@ async function apiChat(sys,ms,mt=250,model="claude-haiku-4-5-20251001"){
   }catch(e){if(i===2)throw e;await new Promise(r=>setTimeout(r,2000))}}
 }
 
-// Simple TTS call + Web Audio playback
-let audioCtx=null;
-
 // Audio context - pre-warmed on first interaction
 let audioCtx=null;
 function warmAudio(){if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume()}}
