@@ -97,6 +97,7 @@ const eR=useRef(null),iR=useRef(null),sR=useRef(""),rR=useRef(null),scRef=useRef
 
 useEffect(()=>{
 document.addEventListener("click",warmAudio,{once:true});document.addEventListener("touchstart",warmAudio,{once:true});
+fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:"ok"})}).catch(()=>{});
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicOk(false);return}
 if(navigator.mediaDevices?.getUserMedia){navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{s.getTracks().forEach(t=>t.stop());setMicOk(true)}).catch(()=>setMicOk(false))}else setMicOk(true)},[]);
 useEffect(()=>{eR.current?.scrollIntoView({behavior:"smooth"})},[ms,ld]);
