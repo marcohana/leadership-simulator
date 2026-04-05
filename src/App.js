@@ -40,8 +40,14 @@ async function apiChat(sys,ms,mt=250,model="claude-haiku-4-5-20251001"){
 // Simple TTS call + Web Audio playback
 let audioCtx=null;
 
+// Pre-warm AudioContext on first user interaction
+let audioCtx=null;
+function warmAudio(){if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume()}}
+if(typeof document!=="undefined"){document.addEventListener("click",warmAudio,{once:true});document.addEventListener("touchstart",warmAudio,{once:true})}
+
 async function apiTTSStream(text,voiceName,onEnd){
   try{
+    warmAudio();
     const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voiceName})});
     if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||"TTS erreur "+r.status)}
     const d=await r.json();
@@ -59,7 +65,6 @@ async function apiTTSStream(text,voiceName,onEnd){
     for(let i=0;i<samples;i++) float32[i]=view.getInt16(i*2,true)/32768;
 
     // Play with Web Audio API
-    if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
     if(audioCtx.state==="suspended") await audioCtx.resume();
 
     const buffer=audioCtx.createBuffer(1,float32.length,24000);
