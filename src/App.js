@@ -37,86 +37,47 @@ async function apiChat(sys,ms,mt=250,model="claude-haiku-4-5-20251001"){
   }catch(e){if(i===2)throw e;await new Promise(r=>setTimeout(r,2000))}}
 }
 
-// Streaming TTS - plays audio chunks as they arrive
+// Simple TTS call + Web Audio playback
 let audioCtx=null;
-let currentSource=null;
-let scheduledTime=0;
 
 async function apiTTSStream(text,voiceName,onEnd){
-  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:24000});
-  if(audioCtx.state==="suspended") await audioCtx.resume();
-  scheduledTime=audioCtx.currentTime;
-  let gotAudio=false;
-
   try{
-    const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voiceName,prompt:"Parle à un rythme soutenu et naturel, comme dans une conversation de bureau entre collègues. Pas de pauses inutiles."})});
+    const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voiceName})});
     if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||"TTS erreur "+r.status)}
+    const d=await r.json();
+    if(!d.audio) throw new Error("Pas d'audio reçu");
 
-    const reader=r.body.getReader();
-    const decoder=new TextDecoder();
-    let buf="";
+    // Decode base64 PCM L16 24kHz mono
+    const raw=atob(d.audio);
+    const bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
 
-    while(true){
-      const{done,value}=await reader.read();
-      if(done) break;
-      buf+=decoder.decode(value,{stream:true});
+    // Convert to Int16 then Float32
+    const view=new DataView(bytes.buffer);
+    const samples=bytes.length/2;
+    const float32=new Float32Array(samples);
+    for(let i=0;i<samples;i++) float32[i]=view.getInt16(i*2,true)/32768;
 
-      // Process complete NDJSON lines
-      const lines=buf.split("\n");
-      buf=lines.pop()||"";
+    // Play with Web Audio API
+    if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==="suspended") await audioCtx.resume();
 
-      for(const line of lines){
-        if(!line.trim()) continue;
-        try{
-          const chunk=JSON.parse(line);
-          if(chunk.error) throw new Error(chunk.error);
-          if(chunk.audio&&chunk.audio.length>0){
-            gotAudio=true;
-            // Decode base64 PCM and schedule playback
-            const raw=atob(chunk.audio);
-            const pcm=new Int16Array(raw.length/2);
-            for(let i=0;i<pcm.length;i++) pcm[i]=raw.charCodeAt(i*2)|(raw.charCodeAt(i*2+1)<<8);
-            const float32=new Float32Array(pcm.length);
-            for(let i=0;i<pcm.length;i++) float32[i]=pcm[i]/32768;
-
-            const buffer=audioCtx.createBuffer(1,float32.length,24000);
-            buffer.getChannelData(0).set(float32);
-
-            const source=audioCtx.createBufferSource();
-            source.buffer=buffer;
-            source.connect(audioCtx.destination);
-            currentSource=source;
-
-            const startAt=Math.max(scheduledTime,audioCtx.currentTime);
-            source.start(startAt);
-            scheduledTime=startAt+buffer.duration;
-          }
-          if(chunk.done){
-            // Schedule onEnd callback after all audio finishes
-            const remaining=Math.max(0,(scheduledTime-audioCtx.currentTime)*1000);
-            setTimeout(()=>onEnd?.(),remaining+100);
-            return;
-          }
-        }catch(e){if(e.message&&!e.message.includes("JSON"))throw e;}
-      }
-    }
-
-    // If we get here without a done signal
-    if(gotAudio){
-      const remaining=Math.max(0,(scheduledTime-audioCtx.currentTime)*1000);
-      setTimeout(()=>onEnd?.(),remaining+100);
-    } else {
-      throw new Error("Pas d'audio reçu");
-    }
+    const buffer=audioCtx.createBuffer(1,float32.length,24000);
+    buffer.getChannelData(0).set(float32);
+    const source=audioCtx.createBufferSource();
+    source.buffer=buffer;
+    source.connect(audioCtx.destination);
+    source.onended=()=>onEnd?.();
+    source.start();
   }catch(e){
-    console.error("TTS stream error:",e);
+    console.error("TTS error:",e);
     onEnd?.();
     throw e;
   }
 }
 
 function stopAudio(){
-  if(audioCtx){try{audioCtx.close()}catch(e){}audioCtx=null;currentSource=null;scheduledTime=0}
+  if(audioCtx){try{audioCtx.close()}catch(e){}audioCtx=null}
 }
 
 function jp(r){try{return JSON.parse(r)}catch(e){}let c=r.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();try{return JSON.parse(c)}catch(e){}let d=0,s=-1;for(let i=0;i<c.length;i++){if(c[i]==="{"){if(s===-1)s=i;d++}if(c[i]==="}"){d--;if(d===0&&s!==-1){try{return JSON.parse(c.slice(s,i+1))}catch(e){s=-1}}}}throw new Error("JSON fail")}
