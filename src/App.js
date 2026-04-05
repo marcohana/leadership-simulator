@@ -195,12 +195,18 @@ if(scr==="intro")return(
 <span style={{fontSize:14,color:T.mt,lineHeight:1.6}}>{t}</span></div>)}</div>
 
 <div style={{background:T.sf,borderRadius:16,padding:24,border:`1px solid ${T.bd}`,marginBottom:40}}>
-<h3 style={{fontFamily:T.mn,fontSize:13,fontWeight:700,color:T.ac,margin:"0 0 16px",letterSpacing:1}}>OPTIONS VOCALES</h3>
-<div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:16}}>
-<div><Tog on={voiceIn} onToggle={v=>{if(v&&micOk===false){setMicW("Micro non disponible. Utilisez Chrome.");return}setVoiceIn(v);setMicW("")}} label="🎙️ Vous parlez au micro" disabled={micOk===false}/>
-<div style={{fontSize:11,color:T.mt,marginTop:6,marginLeft:4}}>Au lieu de taper vos messages</div></div>
+<h3 style={{fontFamily:T.mn,fontSize:13,fontWeight:700,color:T.ac,margin:"0 0 20px",letterSpacing:1}}>OPTIONS VOCALES</h3>
+
+<div style={{fontSize:14,fontWeight:700,color:T.tx,marginBottom:10}}>🎙️ Votre voix <span style={{fontSize:12,fontWeight:400,color:T.mt}}>(comment vous communiquez)</span></div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:24}}>
+{[{k:false,icon:"⌨️",label:"Clavier",desc:"Tapez vos messages"},{k:true,icon:"🎙️",label:"Micro",desc:"Parlez au micro"}].map(v=>
+<button key={String(v.k)} onClick={()=>{if(v.k&&micOk===false){setMicW("Micro non disponible. Utilisez Chrome.");return}setVoiceIn(v.k);setMicW("")}} style={{background:voiceIn===v.k?T.ad:T.cd,border:`1px solid ${voiceIn===v.k?T.ac+"66":T.bd}`,borderRadius:10,padding:"14px 10px",cursor:v.k&&micOk===false?"not-allowed":"pointer",textAlign:"center",color:T.tx,fontFamily:T.ft,opacity:v.k&&micOk===false?.4:1}}>
+<div style={{fontSize:22,marginBottom:6}}>{v.icon}</div>
+<div style={{fontWeight:700,fontSize:13}}>{v.label}</div>
+<div style={{fontSize:11,color:T.mt,marginTop:4}}>{v.desc}</div></button>)}
 </div>
-<div style={{fontSize:13,color:T.mt,marginBottom:10}}>Voix du collaborateur :</div>
+
+<div style={{fontSize:14,fontWeight:700,color:T.tx,marginBottom:10}}>🔊 Voix du collaborateur <span style={{fontSize:12,fontWeight:400,color:T.mt}}>(comment il vous répond)</span></div>
 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
 {[{k:"off",icon:"🔇",label:"Désactivée",desc:"Texte uniquement"},{k:"fast",icon:"⚡",label:"Rapide",desc:"Instantanée, voix standard"},{k:"realistic",icon:"🎭",label:"Réaliste",desc:"Naturelle, léger délai"}].map(v=>
 <button key={v.k} onClick={()=>setVoiceMode(v.k)} style={{background:voiceMode===v.k?T.ad:T.cd,border:`1px solid ${voiceMode===v.k?T.ac+"66":T.bd}`,borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center",color:T.tx,fontFamily:T.ft}}>
@@ -222,8 +228,8 @@ if(scr==="chat"){const cS=!voiceIn&&inp.trim()&&!ld,sM=voiceIn&&!ld&&!spk;return
 <div style={{flex:1}}><div style={{fontWeight:600,fontSize:15,color:T.tx}}>{sc?.name}</div>
 <div style={{fontSize:12,color:T.mt}}>Achats{spk?<span style={{color:T.ac}}> · Parle...</span>:rec?<span style={{color:T.rd}}> · Écoute...</span>:""}</div></div>
 <div style={{display:"flex",gap:6}}>
-<Tog on={voiceIn} onToggle={v=>{if(v&&micOk===false){setMicW("Micro bloqué.");return}setVoiceIn(v);setMicW("")}} label="🎙️" disabled={micOk===false}/>
-<button onClick={()=>{stopAudio();setVoiceMode(m=>m==="off"?"fast":m==="fast"?"realistic":"off")}} style={{background:voiceMode!=="off"?T.ad:T.cd,border:`1px solid ${voiceMode!=="off"?T.ac+"55":T.bd}`,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:T.ft,fontSize:12,color:voiceMode!=="off"?T.ac:T.mt}}>{voiceMode==="off"?"🔇":voiceMode==="fast"?"⚡":"🎭"} {voiceMode==="off"?"Muet":voiceMode==="fast"?"Rapide":"Réaliste"}</button>
+<button onClick={()=>{if(!voiceIn&&micOk===false){setMicW("Micro bloqué.");return}stopAudio();setVoiceIn(v=>!v);setMicW("")}} style={{background:voiceIn?T.ad:T.cd,border:`1px solid ${voiceIn?T.ac+"55":T.bd}`,borderRadius:8,padding:"6px 12px",cursor:!voiceIn&&micOk===false?"not-allowed":"pointer",fontFamily:T.ft,fontSize:12,color:voiceIn?T.ac:T.mt,opacity:!voiceIn&&micOk===false?.4:1}}>{voiceIn?"🎙️ Micro":"⌨️ Clavier"}</button>
+<button onClick={()=>{stopAudio();setVoiceMode(m=>m==="off"?"fast":m==="fast"?"realistic":"off")}} style={{background:voiceMode!=="off"?T.ad:T.cd,border:`1px solid ${voiceMode!=="off"?T.ac+"55":T.bd}`,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:T.ft,fontSize:12,color:voiceMode!=="off"?T.ac:T.mt}}>{voiceMode==="off"?"🔇 Muet":voiceMode==="fast"?"⚡ Rapide":"🎭 Réaliste"}</button>
 </div>
 <button onClick={doDeb} disabled={vc<1||ld} style={{background:vc<1?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${T.ac},#B8892E)`,color:vc<1?T.mt:"#0C0E13",border:"none",borderRadius:10,padding:"10px 16px",fontSize:12,fontWeight:700,cursor:vc<1?"not-allowed":"pointer",fontFamily:T.ft,opacity:vc<1?.5:1,whiteSpace:"nowrap"}}>Fin & Debriefing</button></div>
 <div style={{background:T.ad,borderBottom:`1px solid ${T.ag}`,padding:"10px 20px",fontSize:13,color:T.mt,lineHeight:1.5,flexShrink:0}}><strong style={{color:T.ac}}>Situation:</strong> {sc?.sit}</div>
