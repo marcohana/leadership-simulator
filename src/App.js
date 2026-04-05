@@ -79,6 +79,18 @@ async function apiTTSStream(text,voiceName,onEnd){
 
 function stopAudio(){
   if(audioCtx){try{audioCtx.close()}catch(e){}audioCtx=null}
+  window.speechSynthesis?.cancel();
+}
+
+function speakBrowser(text,onEnd){
+  if(!window.speechSynthesis){onEnd?.();return}
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);u.lang="fr-FR";u.rate=1.1;
+  const voices=window.speechSynthesis.getVoices();
+  const fr=voices.find(v=>v.lang.startsWith("fr"));
+  if(fr)u.voice=fr;
+  u.onend=()=>onEnd?.();u.onerror=()=>onEnd?.();
+  window.speechSynthesis.speak(u);
 }
 
 function jp(r){try{return JSON.parse(r)}catch(e){}let c=r.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();try{return JSON.parse(c)}catch(e){}let d=0,s=-1;for(let i=0;i<c.length;i++){if(c[i]==="{"){if(s===-1)s=i;d++}if(c[i]==="}"){d--;if(d===0&&s!==-1){try{return JSON.parse(c.slice(s,i+1))}catch(e){s=-1}}}}throw new Error("JSON fail")}
@@ -91,23 +103,25 @@ const FL=<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;40
 // ═══ MAIN ═══
 export default function App(){
 const[scr,setScr]=useState("intro"),[sc,setSc]=useState(null),[ms,setMs]=useState([]),[inp,setInp]=useState(""),[ld,setLd]=useState(false),[db,setDb]=useState(null),[dl,setDl]=useState(false),[err,setErr]=useState(null);
-const[voiceIn,setVoiceIn]=useState(false),[voiceOut,setVoiceOut]=useState(false);
+const[voiceIn,setVoiceIn]=useState(false),[voiceMode,setVoiceMode]=useState("off"); // "off" | "fast" | "realistic"
 const[rec,setRec]=useState(false),[spk,setSpk]=useState(false),[tr,setTr]=useState(""),[micOk,setMicOk]=useState(null),[micW,setMicW]=useState("");
 const eR=useRef(null),iR=useRef(null),sR=useRef(""),rR=useRef(null),scRef=useRef(null);
 
 useEffect(()=>{
 document.addEventListener("click",warmAudio,{once:true});document.addEventListener("touchstart",warmAudio,{once:true});
 fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:"ok"})}).catch(()=>{});
+if(window.speechSynthesis){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices()}
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicOk(false);return}
 if(navigator.mediaDevices?.getUserMedia){navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{s.getTracks().forEach(t=>t.stop());setMicOk(true)}).catch(()=>setMicOk(false))}else setMicOk(true)},[]);
 useEffect(()=>{eR.current?.scrollIntoView({behavior:"smooth"})},[ms,ld]);
 
-const speakGemini=useCallback(async(text)=>{
-  if(!voiceOut||!scRef.current)return;
+const doSpeak=useCallback(async(text,voice)=>{
+  if(voiceMode==="off")return;
   setSpk(true);
-  try{await apiTTSStream(text,scRef.current.voice,()=>setSpk(false))}
-  catch(e){console.error("TTS error:",e);setSpk(false)}
-},[voiceOut]);
+  if(voiceMode==="fast"){speakBrowser(text,()=>setSpk(false));return}
+  try{await apiTTSStream(text,voice||scRef.current?.voice,()=>setSpk(false))}
+  catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}
+},[voiceMode]);
 
 const startMic=useCallback(()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicW("Vocal non disponible.");setVoiceIn(false);return}
 stopAudio();const r=new SR();r.lang="fr-FR";r.continuous=true;r.interimResults=true;
@@ -122,9 +136,9 @@ const send=useCallback(async(text)=>{const t=(text||inp).trim();if(!t||ld)return
 const nm=[...ms,{role:"user",content:t}];setMs(nm);setLd(true);setErr(null);
 try{let am=nm.filter(m=>!m.hidden).map(m=>({role:m.role,content:m.content}));if(am[0]?.role==="assistant")am=[{role:"user",content:"(début)"},...am];
 const r=await apiChat(sR.current,am,120);setMs(p=>[...p,{role:"assistant",content:r}]);
-if(voiceOut){setSpk(true);try{await apiTTSStream(r,scRef.current?.voice,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
+if(voiceMode!=="off"){await doSpeak(r)}}
 catch(e){setErr("Erreur de connexion.")}
-setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,voiceOut,voiceIn]);
+setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,voiceMode,voiceIn,doSpeak]);
 
 useEffect(()=>{if(!rec&&tr.trim()&&voiceIn)send(tr.trim())},[rec]);
 
@@ -132,9 +146,9 @@ const start=useCallback(async()=>{const s=gen();setSc(s);scRef.current=s;setMs([
 const sp=sysPr(s);sR.current=sp;
 try{const r=await apiChat(sp,[{role:"user",content:"Bonjour, vous vouliez me voir ?"}],300);
 setMs([{role:"user",content:"Bonjour, vous vouliez me voir ?",hidden:true},{role:"assistant",content:r}]);
-if(voiceOut){setSpk(true);try{await apiTTSStream(r,s.voice,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
+if(voiceMode!=="off"){await doSpeak(r,s.voice)}}
 catch(e){setErr("Erreur de connexion.")}
-setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[voiceOut,voiceIn]);
+setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[voiceMode,voiceIn,doSpeak]);
 
 const doDeb=useCallback(async()=>{stopAudio();setDl(true);setErr(null);setScr("debrief");
 try{const v=ms.filter(m=>!m.hidden),raw=await apiChat("Expert leadership. Réponds UNIQUEMENT JSON valide. Commence par { termine par }.",[{role:"user",content:debPr(sc,v)}],3000,"claude-sonnet-4-20250514");setDb(jp(raw))}catch(e){console.error(e);setErr("Analyse échouée.")}setDl(false)},[ms,sc]);
@@ -182,11 +196,17 @@ if(scr==="intro")return(
 
 <div style={{background:T.sf,borderRadius:16,padding:24,border:`1px solid ${T.bd}`,marginBottom:40}}>
 <h3 style={{fontFamily:T.mn,fontSize:13,fontWeight:700,color:T.ac,margin:"0 0 16px",letterSpacing:1}}>OPTIONS VOCALES</h3>
-<div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+<div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:16}}>
 <div><Tog on={voiceIn} onToggle={v=>{if(v&&micOk===false){setMicW("Micro non disponible. Utilisez Chrome.");return}setVoiceIn(v);setMicW("")}} label="🎙️ Vous parlez au micro" disabled={micOk===false}/>
 <div style={{fontSize:11,color:T.mt,marginTop:6,marginLeft:4}}>Au lieu de taper vos messages</div></div>
-<div><Tog on={voiceOut} onToggle={setVoiceOut} label="🔊 Le collaborateur parle"/>
-<div style={{fontSize:11,color:T.mt,marginTop:6,marginLeft:4}}>Voix réaliste</div></div>
+</div>
+<div style={{fontSize:13,color:T.mt,marginBottom:10}}>Voix du collaborateur :</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+{[{k:"off",icon:"🔇",label:"Désactivée",desc:"Texte uniquement"},{k:"fast",icon:"⚡",label:"Rapide",desc:"Instantanée, voix standard"},{k:"realistic",icon:"🎭",label:"Réaliste",desc:"Naturelle, léger délai"}].map(v=>
+<button key={v.k} onClick={()=>setVoiceMode(v.k)} style={{background:voiceMode===v.k?T.ad:T.cd,border:`1px solid ${voiceMode===v.k?T.ac+"66":T.bd}`,borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center",color:T.tx,fontFamily:T.ft}}>
+<div style={{fontSize:22,marginBottom:6}}>{v.icon}</div>
+<div style={{fontWeight:700,fontSize:13}}>{v.label}</div>
+<div style={{fontSize:11,color:T.mt,marginTop:4}}>{v.desc}</div></button>)}
 </div>
 {micW&&<div style={{marginTop:12,background:`${T.or}18`,border:`1px solid ${T.or}44`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.or}}>⚠️ {micW}</div>}</div>
 
@@ -203,7 +223,7 @@ if(scr==="chat"){const cS=!voiceIn&&inp.trim()&&!ld,sM=voiceIn&&!ld&&!spk;return
 <div style={{fontSize:12,color:T.mt}}>Achats{spk?<span style={{color:T.ac}}> · Parle...</span>:rec?<span style={{color:T.rd}}> · Écoute...</span>:""}</div></div>
 <div style={{display:"flex",gap:6}}>
 <Tog on={voiceIn} onToggle={v=>{if(v&&micOk===false){setMicW("Micro bloqué.");return}setVoiceIn(v);setMicW("")}} label="🎙️" disabled={micOk===false}/>
-<Tog on={voiceOut} onToggle={v=>{if(!v)stopAudio();setVoiceOut(v)}} label="🔊"/>
+<button onClick={()=>{stopAudio();setVoiceMode(m=>m==="off"?"fast":m==="fast"?"realistic":"off")}} style={{background:voiceMode!=="off"?T.ad:T.cd,border:`1px solid ${voiceMode!=="off"?T.ac+"55":T.bd}`,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:T.ft,fontSize:12,color:voiceMode!=="off"?T.ac:T.mt}}>{voiceMode==="off"?"🔇":voiceMode==="fast"?"⚡":"🎭"} {voiceMode==="off"?"Muet":voiceMode==="fast"?"Rapide":"Réaliste"}</button>
 </div>
 <button onClick={doDeb} disabled={vc<1||ld} style={{background:vc<1?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${T.ac},#B8892E)`,color:vc<1?T.mt:"#0C0E13",border:"none",borderRadius:10,padding:"10px 16px",fontSize:12,fontWeight:700,cursor:vc<1?"not-allowed":"pointer",fontFamily:T.ft,opacity:vc<1?.5:1,whiteSpace:"nowrap"}}>Fin & Debriefing</button></div>
 <div style={{background:T.ad,borderBottom:`1px solid ${T.ag}`,padding:"10px 20px",fontSize:13,color:T.mt,lineHeight:1.5,flexShrink:0}}><strong style={{color:T.ac}}>Situation:</strong> {sc?.sit}</div>
