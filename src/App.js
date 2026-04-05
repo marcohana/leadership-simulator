@@ -32,9 +32,9 @@ if(navigator.mediaDevices?.getUserMedia){navigator.mediaDevices.getUserMedia({au
 useEffect(()=>{eR.current?.scrollIntoView({behavior:"smooth"})},[ms,ld]);
 
 const startMic=useCallback(()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicW("Vocal non disponible.");setVoiceIn(false);return}
-stopSp();const r=new SR();r.lang="fr-FR";r.continuous=false;r.interimResults=true;
+stopSp();const r=new SR();r.lang="fr-FR";r.continuous=true;r.interimResults=true;
 r.onstart=()=>{setRec(true);setTr("");setMicW("")};
-r.onresult=e=>{let f="",n="";for(let i=0;i<e.results.length;i++){if(e.results[i].isFinal)f+=e.results[i][0].transcript;else n+=e.results[i][0].transcript}setTr(f||n)};
+r.onresult=e=>{let f="",n="";for(let i=0;i<e.results.length;i++){if(e.results[i].isFinal)f+=e.results[i][0].transcript+" ";else n+=e.results[i][0].transcript}setTr((f+n).trim())};
 r.onend=()=>setRec(false);
 r.onerror=e=>{setRec(false);if(e.error==="not-allowed"||e.error==="service-not-allowed"){setMicOk(false);setMicW("Micro bloqué.");setVoiceIn(false)}else if(e.error!=="no-speech"&&e.error!=="aborted")setMicW("Erreur: "+e.error)};
 rR.current=r;try{r.start()}catch(e){setMicW("Micro indisponible.");setVoiceIn(false)}},[]);
