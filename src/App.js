@@ -1,16 +1,16 @@
 import{useState,useEffect,useRef,useCallback}from"react";
-const N=["Karim","Sophie","Nadia","Thomas","Inès","Laurent","Amina","Julien"],
-P={M1:{l:"M1 – Compétence faible, Motivation haute",s:"S1",sn:"Diriger",b:`Tu es nouveau. Tu ne parles PAS technique. Tu exprimes enthousiasme et inquiétude: "par quoi je commence?","je suis un peu perdu". Tu as besoin qu'on te prenne par la main. 2-3 phrases max.`},
-M2:{l:"M2 – Compétence en développement, Motivation fluctuante",s:"S2",sn:"Coacher",b:`Tu as quelques repères mais tu doutes. Tu proposes des idées puis doutes: "je pensais faire ça, mais est-ce bien?". Tu alternes énergie et découragement. Pas de jargon. 2-3 phrases.`},
-M3:{l:"M3 – Compétence haute, Motivation basse",s:"S3",sn:"Soutenir",b:`Tu sais faire mais tu n'as plus envie. Réponses courtes, sèches: "oui oui","je sais". Si le manager donne des instructions basiques, tu es agacé. S'il te demande comment tu vas ou reconnaît ta valeur, tu t'ouvres. 2-3 phrases.`},
-M4:{l:"M4 – Compétence haute, Motivation haute",s:"S4",sn:"Déléguer",b:`Tu es enthousiaste avec des propositions concrètes. Tu veux le feu vert: "j'ai déjà réfléchi","je peux gérer". Si on te micro-manage tu es agacé. 2-3 phrases.`}},
-S=["Un fournisseur annonce une grosse augmentation de prix. Il faut trouver une solution.","On lance un produit et il faut trouver des fournisseurs dans un nouveau pays.","Un audit a trouvé des problèmes dans la validation des commandes.","La direction demande -10% sur les coûts sans baisser la qualité.","Un fournisseur clé est en difficulté financière et risque de ne plus livrer.","On change de logiciel et le module achats doit être prêt en 1 mois.","Désaccord avec l'équipe qualité sur le choix des fournisseurs.","Mettre en place des achats responsables avec les fournisseurs."],
+const NAMES=["Karim","Sophie","Nadia","Thomas","Inès","Laurent","Amina","Julien"],
+P={M1:{l:"M1 – Compétence faible, Motivation haute",s:"S1",sn:"Diriger",b:`Tu es nouveau. Tu ne parles PAS technique. Tu exprimes enthousiasme et inquiétude: "par quoi je commence?","je suis perdu". Besoin qu'on te prenne par la main. 1-2 phrases courtes max.`},
+M2:{l:"M2 – Compétence en développement, Motivation fluctuante",s:"S2",sn:"Coacher",b:`Tu as quelques repères mais tu doutes. Tu proposes puis doutes: "je pensais faire ça, mais bon...". Alternes énergie et doute. Pas de jargon. 1-2 phrases max.`},
+M3:{l:"M3 – Compétence haute, Motivation basse",s:"S3",sn:"Soutenir",b:`Tu sais faire mais plus envie. Réponses sèches: "oui oui","je sais". Si le manager donne des instructions basiques, agacé. S'il reconnaît ta valeur, tu t'ouvres. 1-2 phrases max.`},
+M4:{l:"M4 – Compétence haute, Motivation haute",s:"S4",sn:"Déléguer",b:`Enthousiaste avec des propositions. Tu veux le feu vert: "j'ai réfléchi","je gère". Si on te micro-manage, agacé. 1-2 phrases max.`}},
+SIT=["Un fournisseur annonce une grosse augmentation de prix. Il faut trouver une solution.","On lance un produit et il faut trouver des fournisseurs dans un nouveau pays.","Un audit a trouvé des problèmes dans la validation des commandes.","La direction demande -10% sur les coûts sans baisser la qualité.","Un fournisseur clé est en difficulté financière et risque de ne plus livrer.","On change de logiciel et le module achats doit être prêt en 1 mois.","Désaccord avec l'équipe qualité sur le choix des fournisseurs.","Mettre en place des achats responsables avec les fournisseurs."],
 TT={M1:"Acheteur junior, 2 mois",M2:"Acheteur, 1 an",M3:"Acheteur senior, 8 ans",M4:"Resp. achats, 12 ans"};
-function gen(){const n=N[Math.random()*N.length|0],mk=["M1","M2","M3","M4"],m=mk[Math.random()*4|0];return{name:n,mat:m,sit:S[Math.random()*S.length|0],p:P[m],title:TT[m]}}
-function sysPr(s){return`Tu es ${s.name}, ${s.title}, département achats.\nPROFIL SECRET: ${s.mat} (${s.p.l})\nCOMPORTEMENT: ${s.p.b}\nSITUATION: ${s.sit}\nRÈGLES: Ne révèle JAMAIS ton profil. Parle naturellement, 2-3 phrases. INTERDIT: jargon, technique, acronymes. Parle de ton vécu et émotions. Réagis au style du manager. Ne mentionne jamais simulation/leadership/Hersey. Premier message: présente-toi et la situation simplement.`}
+function gen(){const n=NAMES[Math.random()*NAMES.length|0],mk=["M1","M2","M3","M4"],m=mk[Math.random()*4|0];return{name:n,mat:m,sit:SIT[Math.random()*SIT.length|0],p:P[m],title:TT[m]}}
+function sysPr(s){return`Tu es ${s.name}, ${s.title}, département achats.\nPROFIL SECRET: ${s.mat} (${s.p.l})\nCOMPORTEMENT: ${s.p.b}\nSITUATION: ${s.sit}\nRÈGLES: Ne révèle JAMAIS ton profil. Parle naturellement. Réponses TRÈS COURTES: 1-2 phrases max, comme une vraie conversation au bureau. INTERDIT: jargon, technique, acronymes. Parle de ton vécu et émotions. Réagis au style du manager. Ne mentionne jamais simulation/leadership/Hersey. Premier message: présente-toi et la situation en 2-3 phrases simples.`}
 function debPr(s,ms){const c=ms.map(m=>`${m.role==="user"?"MANAGER":s.name.toUpperCase()}: ${m.content}`).join("\n"),mc=ms.filter(m=>m.role==="user").length;
 return`Expert leadership situationnel Hersey & Blanchard.\nINFOS: ${s.name}, ${s.title}, ${s.mat} (${s.p.l}), Style idéal: ${s.p.s} – ${s.p.sn}\nSituation: ${s.sit}\nCONVERSATION (${mc} msgs manager):\n${c}\n\nRéponds UNIQUEMENT JSON valide. Pas de texte/backticks. Structure:\n{"noteGlobale":12,"styleDetecte":"S2","styleNomDetecte":"Coacher","styleIdeal":"${s.p.s}","styleNomIdeal":"${s.p.sn}","maturityReveal":"${s.mat}","maturityExplication":"...","analyseGenerale":"...","pointsForts":["..."],"pointsAmelioration":["..."],"exemplesDialogueBons":[{"citation":"...","pourquoi":"..."}],"exemplesDialogueMauvais":[{"citation":"...","pourquoi":"..."}],"exemplesIdeal":[{"situation":"...","aurait_du_dire":"..."}],"conseilFinal":"..."}\nBARÈME: Style inadapté=2-8. Adjacent=8-13. Bon+maladresses=13-16. Parfait=16-20. MALUS -3/-5 si <4 msgs. MALUS si 0 questions. 15+ RARE. Impose sans écouter=max 10. SÉVÈRE.`}
-async function api(sys,ms,mt=1200){const b={model:"claude-sonnet-4-20250514",max_tokens:mt,system:sys,messages:ms.map(m=>({role:m.role,content:m.content}))};
+async function apiCall(sys,ms,mt=1200,model="claude-haiku-4-5-20251001"){const b={model,max_tokens:mt,system:sys,messages:ms.map(m=>({role:m.role,content:m.content}))};
 for(let i=0;i<3;i++){try{const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});if(!r.ok)throw new Error("API "+r.status);const d=await r.json(),t=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");if(!t)throw new Error("Empty");return t}catch(e){if(i===2)throw e;await new Promise(r=>setTimeout(r,2000))}}}
 function jp(r){try{return JSON.parse(r)}catch(e){}let c=r.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();try{return JSON.parse(c)}catch(e){}let d=0,s=-1;for(let i=0;i<c.length;i++){if(c[i]==="{"){if(s===-1)s=i;d++}if(c[i]==="}"){d--;if(d===0&&s!==-1){try{return JSON.parse(c.slice(s,i+1))}catch(e){s=-1}}}}throw new Error("JSON fail")}
 function getFrV(){const v=window.speechSynthesis?.getVoices()||[];return v.find(v=>v.lang.startsWith("fr"))||v[0]||null}
@@ -22,85 +22,118 @@ const FL=<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;40
 
 export default function App(){
 const[scr,setScr]=useState("intro"),[sc,setSc]=useState(null),[ms,setMs]=useState([]),[inp,setInp]=useState(""),[ld,setLd]=useState(false),[db,setDb]=useState(null),[dl,setDl]=useState(false),[err,setErr]=useState(null);
-const[vm,setVm]=useState(false),[rec,setRec]=useState(false),[spk,setSpk]=useState(false),[tr,setTr]=useState(""),[micOk,setMicOk]=useState(null),[micW,setMicW]=useState("");
+const[voiceIn,setVoiceIn]=useState(false),[voiceOut,setVoiceOut]=useState(false);
+const[rec,setRec]=useState(false),[spk,setSpk]=useState(false),[tr,setTr]=useState(""),[micOk,setMicOk]=useState(null),[micW,setMicW]=useState("");
 const eR=useRef(null),iR=useRef(null),sR=useRef(""),rR=useRef(null);
 
 useEffect(()=>{if(window.speechSynthesis){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices()}
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicOk(false);setMicW("Navigateur non supporté pour le vocal. Utilisez Chrome.");return}
-if(navigator.mediaDevices?.getUserMedia){navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{s.getTracks().forEach(t=>t.stop());setMicOk(true)}).catch(()=>{setMicOk(false);setMicW("Micro bloqué. Autorisez-le ou utilisez le mode écrit.")})}else setMicOk(true)},[]);
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicOk(false);return}
+if(navigator.mediaDevices?.getUserMedia){navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{s.getTracks().forEach(t=>t.stop());setMicOk(true)}).catch(()=>{setMicOk(false)})}else setMicOk(true)},[]);
 useEffect(()=>{eR.current?.scrollIntoView({behavior:"smooth"})},[ms,ld]);
 
-const startMic=useCallback(()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicW("Vocal non disponible. Basculement en écrit.");setVm(false);return}
+const startMic=useCallback(()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicW("Vocal non disponible.");setVoiceIn(false);return}
 stopSp();const r=new SR();r.lang="fr-FR";r.continuous=false;r.interimResults=true;
 r.onstart=()=>{setRec(true);setTr("");setMicW("")};
 r.onresult=e=>{let f="",n="";for(let i=0;i<e.results.length;i++){if(e.results[i].isFinal)f+=e.results[i][0].transcript;else n+=e.results[i][0].transcript}setTr(f||n)};
 r.onend=()=>setRec(false);
-r.onerror=e=>{setRec(false);if(e.error==="not-allowed"||e.error==="service-not-allowed"){setMicOk(false);setMicW("Micro bloqué. Basculement en écrit.");setVm(false)}else if(e.error!=="no-speech"&&e.error!=="aborted")setMicW("Erreur: "+e.error)};
-rR.current=r;try{r.start()}catch(e){setMicW("Impossible de démarrer le micro.");setVm(false)}},[]);
+r.onerror=e=>{setRec(false);if(e.error==="not-allowed"||e.error==="service-not-allowed"){setMicOk(false);setMicW("Micro bloqué.");setVoiceIn(false)}else if(e.error!=="no-speech"&&e.error!=="aborted")setMicW("Erreur: "+e.error)};
+rR.current=r;try{r.start()}catch(e){setMicW("Micro indisponible.");setVoiceIn(false)}},[]);
 const stopMic=useCallback(()=>{rR.current?.stop()},[]);
 
 const send=useCallback(async(text)=>{const t=(text||inp).trim();if(!t||ld)return;setInp("");setTr("");
 const nm=[...ms,{role:"user",content:t}];setMs(nm);setLd(true);setErr(null);
 try{let am=nm.filter(m=>!m.hidden).map(m=>({role:m.role,content:m.content}));if(am[0]?.role==="assistant")am=[{role:"user",content:"(début)"},...am];
-const r=await api(sR.current,am,400);setMs(p=>[...p,{role:"assistant",content:r}]);if(vm){setSpk(true);speak(r,()=>setSpk(false))}}catch(e){setErr("Erreur de connexion.")}
-setLd(false);if(!vm)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,vm]);
+const r=await apiCall(sR.current,am,250);setMs(p=>[...p,{role:"assistant",content:r}]);
+if(voiceOut){setSpk(true);speak(r,()=>setSpk(false))}}catch(e){setErr("Erreur de connexion.")}
+setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,voiceOut,voiceIn]);
 
-useEffect(()=>{if(!rec&&tr.trim()&&vm)send(tr.trim())},[rec]);
+useEffect(()=>{if(!rec&&tr.trim()&&voiceIn)send(tr.trim())},[rec]);
 
 const start=useCallback(async()=>{const s=gen();setSc(s);setMs([]);setInp("");setErr(null);setDb(null);setTr("");setScr("chat");setLd(true);
 const sp=sysPr(s);sR.current=sp;
-try{const r=await api(sp,[{role:"user",content:"Bonjour, vous vouliez me voir ?"}],400);setMs([{role:"user",content:"Bonjour, vous vouliez me voir ?",hidden:true},{role:"assistant",content:r}]);if(vm){setSpk(true);speak(r,()=>setSpk(false))}}catch(e){setErr("Erreur de connexion.")}
-setLd(false);if(!vm)setTimeout(()=>iR.current?.focus(),150)},[vm]);
+try{const r=await apiCall(sp,[{role:"user",content:"Bonjour, vous vouliez me voir ?"}],300);setMs([{role:"user",content:"Bonjour, vous vouliez me voir ?",hidden:true},{role:"assistant",content:r}]);
+if(voiceOut){setSpk(true);speak(r,()=>setSpk(false))}}catch(e){setErr("Erreur de connexion.")}
+setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[voiceOut,voiceIn]);
 
 const doDeb=useCallback(async()=>{stopSp();setDl(true);setErr(null);setScr("debrief");
-try{const v=ms.filter(m=>!m.hidden),raw=await api("Expert leadership. Réponds UNIQUEMENT JSON valide. Commence par { termine par }.",[{role:"user",content:debPr(sc,v)}],3000);setDb(jp(raw))}catch(e){console.error(e);setErr("Analyse échouée.")}setDl(false)},[ms,sc]);
+try{const v=ms.filter(m=>!m.hidden),raw=await apiCall("Expert leadership. Réponds UNIQUEMENT JSON valide. Commence par { termine par }.",[{role:"user",content:debPr(sc,v)}],3000,"claude-sonnet-4-20250514");setDb(jp(raw))}catch(e){console.error(e);setErr("Analyse échouée.")}setDl(false)},[ms,sc]);
 
 const vc=ms.filter(m=>m.role==="user"&&!m.hidden).length;
-const B=({children,primary,disabled,onClick,style:st})=><button onClick={onClick} disabled={disabled} style={{background:primary?`linear-gradient(135deg,${T.ac},#B8892E)`:T.sf,color:primary?"#0C0E13":T.mt,border:primary?"none":`1px solid ${T.bd}`,borderRadius:12,padding:"16px 40px",fontSize:16,fontWeight:700,cursor:disabled?"not-allowed":"pointer",fontFamily:T.ft,opacity:disabled?.5:1,...(st||{})}}>{children}</button>;
+const B=({children,primary,disabled,onClick})=><button onClick={onClick} disabled={disabled} style={{background:primary?`linear-gradient(135deg,${T.ac},#B8892E)`:T.sf,color:primary?"#0C0E13":T.mt,border:primary?"none":`1px solid ${T.bd}`,borderRadius:12,padding:"16px 40px",fontSize:16,fontWeight:700,cursor:disabled?"not-allowed":"pointer",fontFamily:T.ft,opacity:disabled?.5:1}}>{children}</button>;
+const Toggle=({on,onToggle,label,disabled})=><button onClick={()=>{if(!disabled)onToggle(!on)}} style={{display:"flex",alignItems:"center",gap:8,background:on?T.ad:T.cd,border:`1px solid ${on?T.ac+"55":T.bd}`,borderRadius:8,padding:"6px 12px",cursor:disabled?"not-allowed":"pointer",fontFamily:T.ft,fontSize:12,color:on?T.ac:T.mt,opacity:disabled?.4:1}}><div style={{width:28,height:16,borderRadius:8,background:on?T.ac:"rgba(255,255,255,0.15)",position:"relative",transition:"all .2s"}}><div style={{width:12,height:12,borderRadius:6,background:on?"#0C0E13":"#888",position:"absolute",top:2,left:on?14:2,transition:"all .2s"}}/></div>{label}</button>;
 
 // ═══ INTRO ═══
 if(scr==="intro")return(
 <div style={{minHeight:"100vh",background:T.bg,fontFamily:T.ft}}>{FL}
-<div style={{maxWidth:680,margin:"0 auto",padding:"60px 24px"}}>
+<div style={{maxWidth:720,margin:"0 auto",padding:"50px 24px"}}>
 <div style={{textAlign:"center"}}><span style={{display:"inline-block",fontSize:11,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:T.ac,background:T.ad,border:`1px solid ${T.ag}`,borderRadius:99,padding:"7px 22px",marginBottom:32}}>Simulation Interactive</span></div>
 <h1 style={{fontFamily:T.mn,fontWeight:800,textAlign:"center",fontSize:"clamp(26px,5vw,42px)",lineHeight:1.15,color:T.tx,margin:"0 0 20px"}}>Leadership<br/><span style={{color:T.ac}}>Situationnel</span></h1>
-<p style={{textAlign:"center",color:T.mt,fontSize:16,lineHeight:1.7,maxWidth:500,margin:"0 auto 40px"}}>Vous êtes manager au département achats. Un collaborateur vient vous voir. <strong style={{color:T.tx}}>Découvrez son profil</strong> et adaptez votre style.</p>
-<div style={{background:T.sf,borderRadius:16,padding:28,border:`1px solid ${T.bd}`,marginBottom:36}}>
-<h3 style={{fontFamily:T.mn,fontSize:13,fontWeight:700,color:T.ac,margin:"0 0 16px",letterSpacing:1}}>HERSEY & BLANCHARD</h3>
+<p style={{textAlign:"center",color:T.mt,fontSize:16,lineHeight:1.7,maxWidth:540,margin:"0 auto 40px"}}>Entraînez-vous à adapter votre style de management selon le modèle <strong style={{color:T.tx}}>Hersey & Blanchard</strong>. Vous incarnez un manager face à un collaborateur dont vous devez identifier le profil.</p>
+
+{/* ── LE MODÈLE ── */}
+<div style={{background:T.sf,borderRadius:16,padding:28,border:`1px solid ${T.bd}`,marginBottom:24}}>
+<h3 style={{fontFamily:T.mn,fontSize:13,fontWeight:700,color:T.ac,margin:"0 0 8px",letterSpacing:1}}>LE MODÈLE HERSEY & BLANCHARD</h3>
+<p style={{fontSize:14,color:T.mt,lineHeight:1.6,margin:"0 0 16px"}}>Chaque collaborateur a un <strong style={{color:T.tx}}>niveau de maturité</strong> défini par deux axes : sa <strong style={{color:T.tx}}>compétence</strong> (sait-il faire ?) et sa <strong style={{color:T.tx}}>motivation</strong> (veut-il faire ?). Le manager efficace adapte son style en fonction de ce profil.</p>
+
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+{[{m:"M1",t:"Débutant enthousiaste",d:"Ne sait pas faire mais veut apprendre. Pose des questions, cherche des instructions.",c:T.rd},
+{m:"M2",t:"Apprenti découragé",d:"Commence à savoir mais doute de lui. Alterne entre motivation et découragement.",c:T.or},
+{m:"M3",t:"Expert désengagé",d:"Sait très bien faire mais n'a plus la motivation. Blasé, fait le minimum.",c:T.gn},
+{m:"M4",t:"Expert autonome",d:"Compétent et motivé. Arrive avec des solutions, veut de l'autonomie.",c:"#5B9BD5"}].map(x=>
+<div key={x.m} style={{background:`${x.c}0A`,border:`1px solid ${x.c}25`,borderRadius:10,padding:"12px 14px"}}>
+<div style={{fontFamily:T.mn,fontSize:12,fontWeight:700,color:x.c,marginBottom:4}}>{x.m} — {x.t}</div>
+<div style={{fontSize:12,color:T.mt,lineHeight:1.5}}>{x.d}</div></div>)}</div>
+
+<h4 style={{fontFamily:T.mn,fontSize:12,fontWeight:700,color:T.ac,margin:"0 0 8px"}}>QUEL STYLE ADOPTER ?</h4>
+<p style={{fontSize:13,color:T.mt,lineHeight:1.6,margin:"0 0 14px"}}>Le style du manager doit correspondre au profil du collaborateur :</p>
 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-{[{s:"S1 – Diriger",d:"Instructions, supervision",c:T.rd,m:"M1: Peu compétent, motivé"},{s:"S2 – Coacher",d:"Guidance + encouragement",c:T.or,m:"M2: Compétence partielle"},{s:"S3 – Soutenir",d:"Écoute, reconnaissance",c:T.gn,m:"M3: Compétent, démotivé"},{s:"S4 – Déléguer",d:"Autonomie, confiance",c:"#5B9BD5",m:"M4: Compétent et motivé"}].map(x=>
-<div key={x.s} style={{background:`${x.c}0D`,border:`1px solid ${x.c}33`,borderRadius:10,padding:"12px 14px"}}>
-<div style={{fontFamily:T.mn,fontSize:12,fontWeight:700,color:x.c}}>{x.s}</div>
-<div style={{fontSize:12,color:T.mt,margin:"4px 0"}}>{x.d}</div>
-<div style={{fontSize:11,color:T.mt,fontStyle:"italic"}}>{x.m}</div></div>)}</div></div>
+{[{s:"S1 – Diriger → M1",d:"Donner des instructions claires, étape par étape. Superviser de près. Le collaborateur a besoin de structure.",c:T.rd},
+{s:"S2 – Coacher → M2",d:"Guider ET encourager. Expliquer le pourquoi, valoriser les progrès, aider à prendre confiance.",c:T.or},
+{s:"S3 – Soutenir → M3",d:"Écouter, reconnaître la valeur, comprendre les frustrations. Impliquer dans les décisions pour remotiver.",c:T.gn},
+{s:"S4 – Déléguer → M4",d:"Faire confiance, donner de l'autonomie. Rester disponible sans micro-manager.",c:"#5B9BD5"}].map(x=>
+<div key={x.s} style={{background:`${x.c}0A`,border:`1px solid ${x.c}25`,borderRadius:10,padding:"12px 14px"}}>
+<div style={{fontFamily:T.mn,fontSize:12,fontWeight:700,color:x.c,marginBottom:4}}>{x.s}</div>
+<div style={{fontSize:12,color:T.mt,lineHeight:1.5}}>{x.d}</div></div>)}</div></div>
+
+{/* ── COMMENT ÇA MARCHE ── */}
 <div style={{background:T.sf,borderRadius:16,padding:24,border:`1px solid ${T.bd}`,marginBottom:24}}>
 <h3 style={{fontFamily:T.mn,fontSize:13,fontWeight:700,color:T.ac,margin:"0 0 12px",letterSpacing:1}}>COMMENT ÇA MARCHE</h3>
-{["Son profil est caché.","Conversez librement.","Observez ses réactions.","Terminez pour le débrief noté /20."].map((t,i)=>
-<div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:8}}>
+{["Un collaborateur vous présente un problème. Son profil (M1, M2, M3 ou M4) est caché.","Conversez librement : posez des questions, donnez des consignes, écoutez, motivez...","Observez ses réactions pour deviner son profil et adapter votre style.","Quand vous le souhaitez, terminez pour recevoir votre débrief détaillé noté sur 20."].map((t,i)=>
+<div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
 <span style={{fontFamily:T.mn,fontSize:12,fontWeight:700,color:T.ac,background:T.ad,borderRadius:6,padding:"2px 8px",flexShrink:0}}>{i+1}</span>
-<span style={{fontSize:14,color:T.mt,lineHeight:1.5}}>{t}</span></div>)}</div>
+<span style={{fontSize:14,color:T.mt,lineHeight:1.6}}>{t}</span></div>)}</div>
+
+{/* ── OPTIONS VOIX ── */}
 <div style={{background:T.sf,borderRadius:16,padding:24,border:`1px solid ${T.bd}`,marginBottom:40}}>
-<h3 style={{fontFamily:T.mn,fontSize:13,fontWeight:700,color:T.ac,margin:"0 0 16px",letterSpacing:1}}>MODE</h3>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-<button onClick={()=>{setVm(false);setMicW("")}} style={{background:!vm?T.ad:T.cd,border:`1px solid ${!vm?T.ac+"66":T.bd}`,borderRadius:12,padding:"18px 16px",cursor:"pointer",textAlign:"center",color:T.tx,fontFamily:T.ft}}>
-<div style={{fontSize:28,marginBottom:8}}>⌨️</div><div style={{fontWeight:700,fontSize:14}}>Écrit</div></button>
-<button onClick={()=>{if(micOk===false){setMicW("Micro non disponible ici. Utilisez Chrome sur votre domaine (Vercel).");return}setVm(true);setMicW("")}} style={{background:vm?T.ad:T.cd,border:`1px solid ${vm?T.ac+"66":T.bd}`,borderRadius:12,padding:"18px 16px",cursor:"pointer",textAlign:"center",color:T.tx,fontFamily:T.ft,opacity:micOk===false?.5:1}}>
-<div style={{fontSize:28,marginBottom:8}}>🎙️</div><div style={{fontWeight:700,fontSize:14}}>Vocal</div>
-<div style={{fontSize:11,color:T.mt,marginTop:4}}>{micOk===false?"Non disponible ici":""}</div></button></div>
-{micW&&<div style={{marginTop:12,background:`${T.or}18`,border:`1px solid ${T.or}44`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.or,lineHeight:1.5}}>⚠️ {micW}</div>}</div>
+<h3 style={{fontFamily:T.mn,fontSize:13,fontWeight:700,color:T.ac,margin:"0 0 16px",letterSpacing:1}}>OPTIONS VOCALES</h3>
+<div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+<div>
+<Toggle on={voiceIn} onToggle={v=>{if(v&&micOk===false){setMicW("Micro non disponible. Utilisez Chrome.");return}setVoiceIn(v);setMicW("")}} label="🎙️ Vous parlez au micro" disabled={micOk===false}/>
+<div style={{fontSize:11,color:T.mt,marginTop:6,marginLeft:4}}>Au lieu de taper vos messages</div>
+</div>
+<div>
+<Toggle on={voiceOut} onToggle={setVoiceOut} label="🔊 Le collaborateur parle"/>
+<div style={{fontSize:11,color:T.mt,marginTop:6,marginLeft:4}}>Ses réponses sont lues à voix haute</div>
+</div>
+</div>
+{micW&&<div style={{marginTop:12,background:`${T.or}18`,border:`1px solid ${T.or}44`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.or}}>⚠️ {micW}</div>}</div>
+
 <div style={{textAlign:"center"}}><B primary onClick={start}>Lancer la simulation</B></div>
 </div></div>);
 
 // ═══ CHAT ═══
-if(scr==="chat"){const cS=!vm&&inp.trim()&&!ld,sM=vm&&!ld&&!spk;return(
+if(scr==="chat"){const cS=!voiceIn&&inp.trim()&&!ld,sM=voiceIn&&!ld&&!spk;return(
 <div style={{minHeight:"100vh",background:T.bg,fontFamily:T.ft,display:"flex",flexDirection:"column",height:"100vh"}}>{FL}<style>{CSS}</style>
-<div style={{background:T.sf,borderBottom:`1px solid ${T.bd}`,padding:"14px 20px",display:"flex",alignItems:"center",gap:14,flexShrink:0}}>
+<div style={{background:T.sf,borderBottom:`1px solid ${T.bd}`,padding:"14px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
 <button onClick={()=>{stopSp();setScr("intro")}} style={{background:"none",border:"none",color:T.mt,cursor:"pointer",fontSize:20,padding:4}}>←</button>
 <div style={{width:42,height:42,borderRadius:10,background:T.ad,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontFamily:T.mn,fontWeight:700,color:T.ac}}>{sc?.name?.[0]}</div>
 <div style={{flex:1}}><div style={{fontWeight:600,fontSize:15,color:T.tx}}>{sc?.name}</div>
-<div style={{fontSize:12,color:T.mt}}>Achats{vm&&spk?<span style={{color:T.ac}}> · Parle...</span>:vm&&rec?<span style={{color:T.rd}}> · Écoute...</span>:""}</div></div>
-<button onClick={()=>{stopSp();if(!vm&&micOk===false){setMicW("Micro non disponible. Déployez sur Vercel.");return}setVm(v=>!v);setMicW("")}} style={{background:T.cd,border:`1px solid ${T.bd}`,borderRadius:8,padding:"6px 12px",fontSize:12,color:T.mt,cursor:"pointer",fontFamily:T.ft}}>{vm?"⌨️":"🎙️"}</button>
-<button onClick={doDeb} disabled={vc<1||ld} style={{background:vc<1?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${T.ac},#B8892E)`,color:vc<1?T.mt:"#0C0E13",border:"none",borderRadius:10,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:vc<1?"not-allowed":"pointer",fontFamily:T.ft,opacity:vc<1?.5:1}}>Débrief</button></div>
+<div style={{fontSize:12,color:T.mt}}>Achats{spk?<span style={{color:T.ac}}> · Parle...</span>:rec?<span style={{color:T.rd}}> · Écoute...</span>:""}</div></div>
+<div style={{display:"flex",gap:6}}>
+<Toggle on={voiceIn} onToggle={v=>{if(v&&micOk===false){setMicW("Micro bloqué.");return}setVoiceIn(v);setMicW("")}} label="🎙️" disabled={micOk===false}/>
+<Toggle on={voiceOut} onToggle={v=>{if(!v)stopSp();setVoiceOut(v)}} label="🔊"/>
+</div>
+<button onClick={doDeb} disabled={vc<1||ld} style={{background:vc<1?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${T.ac},#B8892E)`,color:vc<1?T.mt:"#0C0E13",border:"none",borderRadius:10,padding:"10px 16px",fontSize:12,fontWeight:700,cursor:vc<1?"not-allowed":"pointer",fontFamily:T.ft,opacity:vc<1?.5:1,whiteSpace:"nowrap"}}>Fin & Debriefing</button></div>
 <div style={{background:T.ad,borderBottom:`1px solid ${T.ag}`,padding:"10px 20px",fontSize:13,color:T.mt,lineHeight:1.5,flexShrink:0}}><strong style={{color:T.ac}}>Situation:</strong> {sc?.sit}</div>
 {err&&<div style={{background:`${T.rd}22`,color:T.rd,padding:"10px 20px",fontSize:13,flexShrink:0}}>{err}<button onClick={()=>setErr(null)} style={{background:"none",border:"none",color:T.rd,textDecoration:"underline",cursor:"pointer",fontSize:13,marginLeft:8}}>×</button></div>}
 {micW&&<div style={{background:`${T.or}18`,borderBottom:`1px solid ${T.or}33`,padding:"10px 20px",fontSize:13,color:T.or,flexShrink:0}}>⚠️ {micW}<button onClick={()=>setMicW("")} style={{background:"none",border:"none",color:T.or,textDecoration:"underline",cursor:"pointer",fontSize:13,marginLeft:8}}>OK</button></div>}
@@ -112,7 +145,7 @@ if(scr==="chat"){const cS=!vm&&inp.trim()&&!ld,sM=vm&&!ld&&!spk;return(
 <div style={{background:T.sf,border:`1px solid ${T.bd}`,borderRadius:"16px 16px 16px 4px",padding:"13px 22px",color:T.mt}}><span style={{animation:"pu 1.5s infinite"}}>●</span><span style={{animation:"pu 1.5s infinite .3s"}}> ●</span><span style={{animation:"pu 1.5s infinite .6s"}}> ●</span></div></div>}
 <div ref={eR}/></div>
 <div style={{background:T.sf,borderTop:`1px solid ${T.bd}`,padding:"14px 20px",flexShrink:0}}>
-{vm?<div style={{textAlign:"center"}}>
+{voiceIn?<div style={{textAlign:"center"}}>
 {(rec||tr)&&<div style={{background:T.cd,borderRadius:10,padding:"10px 16px",marginBottom:14,fontSize:14,color:rec?T.mt:T.tx,fontStyle:rec?"italic":"normal",minHeight:20}}>{tr||"En écoute..."}</div>}
 {spk&&<div style={{marginBottom:14,display:"flex",alignItems:"center",justifyContent:"center",gap:4,height:32}}>
 {[0,1,2,3,4].map(i=><div key={i} style={{width:4,height:24,borderRadius:2,background:T.ac,animation:`sw .8s ease-in-out ${i*.12}s infinite`}}/>)}
@@ -135,7 +168,7 @@ return(
 <div style={{minHeight:"100vh",background:T.bg,fontFamily:T.ft}}>{FL}
 <div style={{maxWidth:700,margin:"0 auto",padding:"40px 20px"}}>
 <div style={{textAlign:"center",marginBottom:40}}>
-<span style={{display:"inline-block",fontSize:11,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:T.ac,background:T.ad,border:`1px solid ${T.ag}`,borderRadius:99,padding:"6px 20px",marginBottom:24}}>Débrief</span>
+<span style={{display:"inline-block",fontSize:11,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:T.ac,background:T.ad,border:`1px solid ${T.ag}`,borderRadius:99,padding:"6px 20px",marginBottom:24}}>Debriefing</span>
 <div style={{fontSize:72,fontFamily:T.mn,fontWeight:800,color:nc,lineHeight:1,textShadow:`0 0 40px ${nc}44`}}>{nt}<span style={{fontSize:28,color:T.mt}}>/20</span></div>
 <div style={{fontSize:15,color:T.mt,marginTop:10,maxWidth:560,margin:"10px auto 0",lineHeight:1.6}}>{db.analyseGenerale}</div></div>
 <div style={{background:T.sf,borderRadius:16,padding:24,border:`1px solid ${T.ag}`,marginBottom:20}}>
