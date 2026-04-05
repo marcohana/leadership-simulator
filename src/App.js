@@ -40,10 +40,9 @@ async function apiChat(sys,ms,mt=250,model="claude-haiku-4-5-20251001"){
 // Simple TTS call + Web Audio playback
 let audioCtx=null;
 
-// Pre-warm AudioContext on first user interaction
+// Audio context - pre-warmed on first interaction
 let audioCtx=null;
 function warmAudio(){if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume()}}
-if(typeof document!=="undefined"){document.addEventListener("click",warmAudio,{once:true});document.addEventListener("touchstart",warmAudio,{once:true})}
 
 async function apiTTSStream(text,voiceName,onEnd){
   try{
@@ -99,7 +98,9 @@ const[voiceIn,setVoiceIn]=useState(false),[voiceOut,setVoiceOut]=useState(false)
 const[rec,setRec]=useState(false),[spk,setSpk]=useState(false),[tr,setTr]=useState(""),[micOk,setMicOk]=useState(null),[micW,setMicW]=useState("");
 const eR=useRef(null),iR=useRef(null),sR=useRef(""),rR=useRef(null),scRef=useRef(null);
 
-useEffect(()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicOk(false);return}
+useEffect(()=>{
+document.addEventListener("click",warmAudio,{once:true});document.addEventListener("touchstart",warmAudio,{once:true});
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicOk(false);return}
 if(navigator.mediaDevices?.getUserMedia){navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{s.getTracks().forEach(t=>t.stop());setMicOk(true)}).catch(()=>setMicOk(false))}else setMicOk(true)},[]);
 useEffect(()=>{eR.current?.scrollIntoView({behavior:"smooth"})},[ms,ld]);
 
