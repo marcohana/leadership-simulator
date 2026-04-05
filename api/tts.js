@@ -4,18 +4,17 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY not configured" });
 
-  const { text, voiceName, prompt } = req.body;
+  const { text, voiceName } = req.body;
   if (!text) return res.status(400).json({ error: "Missing text" });
 
   const voice = voiceName || "Kore";
-  const stylePrompt = prompt || "Parle vite et naturellement, comme au bureau. Pas de pauses.";
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
   const payload = {
     contents: [{
       role: "user",
-      parts: [{ text: `${stylePrompt}\n\nDis ceci : "${text}"` }]
+      parts: [{ text: `Rythme rapide, naturel: "${text}"` }]
     }],
     generationConfig: {
       responseModalities: ["AUDIO"],
