@@ -37,38 +37,87 @@ async function apiChat(sys,ms,mt=250,model="claude-haiku-4-5-20251001"){
   }catch(e){if(i===2)throw e;await new Promise(r=>setTimeout(r,2000))}}
 }
 
-async function apiTTS(text,voiceName){
-  const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voiceName,prompt:"Parle à un rythme soutenu et naturel, comme dans une conversation de bureau entre collègues. Pas de pauses inutiles."})});
-  if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||"TTS erreur "+r.status)}
-  const d=await r.json();
-  if(!d.audio) throw new Error("Pas d'audio reçu");
-  return d.audio;
-}
+// Streaming TTS - plays audio chunks as they arrive
+let audioCtx=null;
+let currentSource=null;
+let scheduledTime=0;
 
-// Convert PCM L16 24kHz to WAV and play
-function playPCM(base64pcm,onEnd){
+async function apiTTSStream(text,voiceName,onEnd){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:24000});
+  if(audioCtx.state==="suspended") await audioCtx.resume();
+  scheduledTime=audioCtx.currentTime;
+  let gotAudio=false;
+
   try{
-    const raw=atob(base64pcm);
-    const pcm=new Uint8Array(raw.length);
-    for(let i=0;i<raw.length;i++) pcm[i]=raw.charCodeAt(i);
-    const sr=24000,ch=1,bps=16;
-    const wavHeader=new ArrayBuffer(44);
-    const v=new DataView(wavHeader);
-    const writeStr=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
-    writeStr(0,"RIFF");v.setUint32(4,36+pcm.length,true);writeStr(8,"WAVE");
-    writeStr(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,ch,true);
-    v.setUint32(24,sr,true);v.setUint32(28,sr*ch*bps/8,true);v.setUint16(32,ch*bps/8,true);v.setUint16(34,bps,true);
-    writeStr(36,"data");v.setUint32(40,pcm.length,true);
-    const wav=new Blob([wavHeader,pcm],{type:"audio/wav"});
-    const url=URL.createObjectURL(wav);
-    const audio=new Audio(url);
-    audio.onended=()=>{URL.revokeObjectURL(url);onEnd?.()};
-    audio.onerror=()=>{URL.revokeObjectURL(url);onEnd?.()};
-    audio.play().catch(()=>onEnd?.());
-  }catch(e){console.error("Audio play error:",e);onEnd?.()}
+    const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voiceName,prompt:"Parle à un rythme soutenu et naturel, comme dans une conversation de bureau entre collègues. Pas de pauses inutiles."})});
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||"TTS erreur "+r.status)}
+
+    const reader=r.body.getReader();
+    const decoder=new TextDecoder();
+    let buf="";
+
+    while(true){
+      const{done,value}=await reader.read();
+      if(done) break;
+      buf+=decoder.decode(value,{stream:true});
+
+      // Process complete NDJSON lines
+      const lines=buf.split("\n");
+      buf=lines.pop()||"";
+
+      for(const line of lines){
+        if(!line.trim()) continue;
+        try{
+          const chunk=JSON.parse(line);
+          if(chunk.error) throw new Error(chunk.error);
+          if(chunk.audio&&chunk.audio.length>0){
+            gotAudio=true;
+            // Decode base64 PCM and schedule playback
+            const raw=atob(chunk.audio);
+            const pcm=new Int16Array(raw.length/2);
+            for(let i=0;i<pcm.length;i++) pcm[i]=raw.charCodeAt(i*2)|(raw.charCodeAt(i*2+1)<<8);
+            const float32=new Float32Array(pcm.length);
+            for(let i=0;i<pcm.length;i++) float32[i]=pcm[i]/32768;
+
+            const buffer=audioCtx.createBuffer(1,float32.length,24000);
+            buffer.getChannelData(0).set(float32);
+
+            const source=audioCtx.createBufferSource();
+            source.buffer=buffer;
+            source.connect(audioCtx.destination);
+            currentSource=source;
+
+            const startAt=Math.max(scheduledTime,audioCtx.currentTime);
+            source.start(startAt);
+            scheduledTime=startAt+buffer.duration;
+          }
+          if(chunk.done){
+            // Schedule onEnd callback after all audio finishes
+            const remaining=Math.max(0,(scheduledTime-audioCtx.currentTime)*1000);
+            setTimeout(()=>onEnd?.(),remaining+100);
+            return;
+          }
+        }catch(e){if(e.message&&!e.message.includes("JSON"))throw e;}
+      }
+    }
+
+    // If we get here without a done signal
+    if(gotAudio){
+      const remaining=Math.max(0,(scheduledTime-audioCtx.currentTime)*1000);
+      setTimeout(()=>onEnd?.(),remaining+100);
+    } else {
+      throw new Error("Pas d'audio reçu");
+    }
+  }catch(e){
+    console.error("TTS stream error:",e);
+    onEnd?.();
+    throw e;
+  }
 }
 
-function stopAudio(){document.querySelectorAll("audio").forEach(a=>{a.pause();a.src=""})}
+function stopAudio(){
+  if(audioCtx){try{audioCtx.close()}catch(e){}audioCtx=null;currentSource=null;scheduledTime=0}
+}
 
 function jp(r){try{return JSON.parse(r)}catch(e){}let c=r.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();try{return JSON.parse(c)}catch(e){}let d=0,s=-1;for(let i=0;i<c.length;i++){if(c[i]==="{"){if(s===-1)s=i;d++}if(c[i]==="}"){d--;if(d===0&&s!==-1){try{return JSON.parse(c.slice(s,i+1))}catch(e){s=-1}}}}throw new Error("JSON fail")}
 
@@ -91,7 +140,7 @@ useEffect(()=>{eR.current?.scrollIntoView({behavior:"smooth"})},[ms,ld]);
 const speakGemini=useCallback(async(text)=>{
   if(!voiceOut||!scRef.current)return;
   setSpk(true);
-  try{const audio=await apiTTS(text,scRef.current.voice);playPCM(audio,()=>setSpk(false))}
+  try{await apiTTSStream(text,scRef.current.voice,()=>setSpk(false))}
   catch(e){console.error("TTS error:",e);setSpk(false)}
 },[voiceOut]);
 
@@ -108,7 +157,7 @@ const send=useCallback(async(text)=>{const t=(text||inp).trim();if(!t||ld)return
 const nm=[...ms,{role:"user",content:t}];setMs(nm);setLd(true);setErr(null);
 try{let am=nm.filter(m=>!m.hidden).map(m=>({role:m.role,content:m.content}));if(am[0]?.role==="assistant")am=[{role:"user",content:"(début)"},...am];
 const r=await apiChat(sR.current,am,250);setMs(p=>[...p,{role:"assistant",content:r}]);
-if(voiceOut){setSpk(true);try{const audio=await apiTTS(r,scRef.current?.voice);playPCM(audio,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
+if(voiceOut){setSpk(true);try{await apiTTSStream(r,scRef.current?.voice,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
 catch(e){setErr("Erreur de connexion.")}
 setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,voiceOut,voiceIn]);
 
@@ -118,7 +167,7 @@ const start=useCallback(async()=>{const s=gen();setSc(s);scRef.current=s;setMs([
 const sp=sysPr(s);sR.current=sp;
 try{const r=await apiChat(sp,[{role:"user",content:"Bonjour, vous vouliez me voir ?"}],300);
 setMs([{role:"user",content:"Bonjour, vous vouliez me voir ?",hidden:true},{role:"assistant",content:r}]);
-if(voiceOut){setSpk(true);try{const audio=await apiTTS(r,s.voice);playPCM(audio,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
+if(voiceOut){setSpk(true);try{await apiTTSStream(r,s.voice,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
 catch(e){setErr("Erreur de connexion.")}
 setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[voiceOut,voiceIn]);
 
@@ -172,7 +221,7 @@ if(scr==="intro")return(
 <div><Tog on={voiceIn} onToggle={v=>{if(v&&micOk===false){setMicW("Micro non disponible. Utilisez Chrome.");return}setVoiceIn(v);setMicW("")}} label="🎙️ Vous parlez au micro" disabled={micOk===false}/>
 <div style={{fontSize:11,color:T.mt,marginTop:6,marginLeft:4}}>Au lieu de taper vos messages</div></div>
 <div><Tog on={voiceOut} onToggle={setVoiceOut} label="🔊 Le collaborateur parle"/>
-<div style={{fontSize:11,color:T.mt,marginTop:6,marginLeft:4}}>Voix réaliste (Gemini TTS)</div></div>
+<div style={{fontSize:11,color:T.mt,marginTop:6,marginLeft:4}}>Voix réaliste</div></div>
 </div>
 {micW&&<div style={{marginTop:12,background:`${T.or}18`,border:`1px solid ${T.or}44`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.or}}>⚠️ {micW}</div>}</div>
 
