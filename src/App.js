@@ -82,6 +82,13 @@ function stopAudio(){
   window.speechSynthesis?.cancel();
 }
 
+// iOS fix: prime speechSynthesis on user gesture
+function primeSpeech(){
+  if(!window.speechSynthesis)return;
+  const u=new SpeechSynthesisUtterance("");u.volume=0;u.lang="fr-FR";
+  window.speechSynthesis.speak(u);
+}
+
 function speakBrowser(text,onEnd){
   if(!window.speechSynthesis){onEnd?.();return}
   window.speechSynthesis.cancel();
@@ -108,7 +115,7 @@ const[rec,setRec]=useState(false),[spk,setSpk]=useState(false),[tr,setTr]=useSta
 const eR=useRef(null),iR=useRef(null),sR=useRef(""),rR=useRef(null),scRef=useRef(null);
 
 useEffect(()=>{
-document.addEventListener("click",warmAudio,{once:true});document.addEventListener("touchstart",warmAudio,{once:true});
+document.addEventListener("click",()=>{warmAudio();primeSpeech()},{once:true});document.addEventListener("touchstart",()=>{warmAudio();primeSpeech()},{once:true});
 fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:"ok"})}).catch(()=>{});
 if(window.speechSynthesis){window.speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices()}
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setMicOk(false);return}
@@ -133,6 +140,7 @@ rR.current=r;try{r.start()}catch(e){setMicW("Micro indisponible.");setVoiceIn(fa
 const stopMic=useCallback(()=>{rR.current?.stop()},[]);
 
 const send=useCallback(async(text)=>{const t=(text||inp).trim();if(!t||ld)return;setInp("");setTr("");
+primeSpeech();warmAudio();
 const nm=[...ms,{role:"user",content:t}];setMs(nm);setLd(true);setErr(null);
 try{let am=nm.filter(m=>!m.hidden).map(m=>({role:m.role,content:m.content}));if(am[0]?.role==="assistant")am=[{role:"user",content:"(début)"},...am];
 const r=await apiChat(sR.current,am,120);setMs(p=>[...p,{role:"assistant",content:r}]);
@@ -142,7 +150,7 @@ setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,voi
 
 useEffect(()=>{if(!rec&&tr.trim()&&voiceIn)send(tr.trim())},[rec]);
 
-const start=useCallback(async()=>{const s=gen();setSc(s);scRef.current=s;setMs([]);setInp("");setErr(null);setDb(null);setTr("");setScr("chat");setLd(true);
+const start=useCallback(async()=>{primeSpeech();warmAudio();const s=gen();setSc(s);scRef.current=s;setMs([]);setInp("");setErr(null);setDb(null);setTr("");setScr("chat");setLd(true);
 const sp=sysPr(s);sR.current=sp;
 try{const r=await apiChat(sp,[{role:"user",content:"Bonjour, vous vouliez me voir ?"}],300);
 setMs([{role:"user",content:"Bonjour, vous vouliez me voir ?",hidden:true},{role:"assistant",content:r}]);
