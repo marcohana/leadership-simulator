@@ -39,10 +39,10 @@ async function apiChat(sys,ms,mt=250,model="claude-haiku-4-5-20251001"){
 
 async function apiTTS(text,voiceName){
   const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voiceName,prompt:"Parle à un rythme soutenu et naturel, comme dans une conversation de bureau entre collègues. Pas de pauses inutiles."})});
-  if(!r.ok) throw new Error("TTS "+r.status);
+  if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||"TTS erreur "+r.status)}
   const d=await r.json();
-  if(!d.audio) throw new Error("No audio");
-  return d.audio; // base64 PCM
+  if(!d.audio) throw new Error("Pas d'audio reçu");
+  return d.audio;
 }
 
 // Convert PCM L16 24kHz to WAV and play
@@ -108,7 +108,7 @@ const send=useCallback(async(text)=>{const t=(text||inp).trim();if(!t||ld)return
 const nm=[...ms,{role:"user",content:t}];setMs(nm);setLd(true);setErr(null);
 try{let am=nm.filter(m=>!m.hidden).map(m=>({role:m.role,content:m.content}));if(am[0]?.role==="assistant")am=[{role:"user",content:"(début)"},...am];
 const r=await apiChat(sR.current,am,250);setMs(p=>[...p,{role:"assistant",content:r}]);
-if(voiceOut){setSpk(true);try{const audio=await apiTTS(r,scRef.current?.voice);playPCM(audio,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false)}}}
+if(voiceOut){setSpk(true);try{const audio=await apiTTS(r,scRef.current?.voice);playPCM(audio,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
 catch(e){setErr("Erreur de connexion.")}
 setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,voiceOut,voiceIn]);
 
@@ -118,7 +118,7 @@ const start=useCallback(async()=>{const s=gen();setSc(s);scRef.current=s;setMs([
 const sp=sysPr(s);sR.current=sp;
 try{const r=await apiChat(sp,[{role:"user",content:"Bonjour, vous vouliez me voir ?"}],300);
 setMs([{role:"user",content:"Bonjour, vous vouliez me voir ?",hidden:true},{role:"assistant",content:r}]);
-if(voiceOut){setSpk(true);try{const audio=await apiTTS(r,s.voice);playPCM(audio,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false)}}}
+if(voiceOut){setSpk(true);try{const audio=await apiTTS(r,s.voice);playPCM(audio,()=>setSpk(false))}catch(e){console.error("TTS:",e);setSpk(false);setErr("Voix indisponible: "+e.message)}}}
 catch(e){setErr("Erreur de connexion.")}
 setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[voiceOut,voiceIn]);
 
