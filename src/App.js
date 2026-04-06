@@ -27,6 +27,7 @@ function debPr(s,ms){const c=ms.map(m=>`${m.role==="user"?"MANAGER":s.name.toUpp
 return`Expert leadership situationnel Hersey & Blanchard.\nINFOS: ${s.name}, ${s.title}, ${s.mat} (${s.p.l}), Style idéal: ${s.p.s} – ${s.p.sn}\nSituation: ${s.sit}\nCONVERSATION (${mc} msgs manager):\n${c}\n\nRéponds UNIQUEMENT JSON valide. Pas de texte/backticks. Structure:\n{"noteGlobale":12,"styleDetecte":"S2","styleNomDetecte":"Coacher","styleIdeal":"${s.p.s}","styleNomIdeal":"${s.p.sn}","maturityReveal":"${s.mat}","maturityExplication":"...","analyseGenerale":"...","pointsForts":["..."],"pointsAmelioration":["..."],"exemplesDialogueBons":[{"citation":"...","pourquoi":"..."}],"exemplesDialogueMauvais":[{"citation":"...","pourquoi":"..."}],"exemplesIdeal":[{"situation":"...","aurait_du_dire":"..."}],"conseilFinal":"..."}\nBARÈME: Style inadapté=2-8. Adjacent=8-13. Bon+maladresses=13-16. Parfait=16-20. MALUS -3/-5 si <4 msgs. MALUS si 0 questions. 15+ RARE. Impose sans écouter=max 10. SÉVÈRE.`}
 
 // ═══ API CALLS ═══
+// Non-streaming chat (for debrief)
 async function apiChat(sys,ms,mt=250,model="claude-haiku-4-5-20251001"){
   const b={model,max_tokens:mt,system:sys,messages:ms.map(m=>({role:m.role,content:m.content}))};
   for(let i=0;i<3;i++){try{
@@ -35,6 +36,44 @@ async function apiChat(sys,ms,mt=250,model="claude-haiku-4-5-20251001"){
     const d=await r.json(),t=(d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
     if(!t)throw new Error("Empty");return t;
   }catch(e){if(i===2)throw e;await new Promise(r=>setTimeout(r,2000))}}
+}
+
+// Streaming chat - calls onText with accumulated text, onFirstSentence once with the first complete sentence
+async function apiChatStream(sys,ms,mt=120,onText,onFirstSentence){
+  const b={stream:true,model:"claude-haiku-4-5-20251001",max_tokens:mt,system:sys,messages:ms.map(m=>({role:m.role,content:m.content}))};
+  const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});
+  if(!r.ok)throw new Error("API "+r.status);
+  const reader=r.body.getReader();
+  const decoder=new TextDecoder();
+  let full="",buf="",sentFirst=false;
+  while(true){
+    const{done,value}=await reader.read();
+    if(done)break;
+    buf+=decoder.decode(value,{stream:true});
+    // Parse SSE events
+    const lines=buf.split("\n");
+    buf=lines.pop()||"";
+    for(const line of lines){
+      if(!line.startsWith("data: "))continue;
+      const data=line.slice(6);
+      if(data==="[DONE]")continue;
+      try{
+        const ev=JSON.parse(data);
+        if(ev.type==="content_block_delta"&&ev.delta?.text){
+          full+=ev.delta.text;
+          onText?.(full);
+          // Detect first complete sentence
+          if(!sentFirst){
+            const match=full.match(/[.!?…]\s|[.!?…]$/);
+            if(match){sentFirst=true;const idx=full.indexOf(match[0])+1;onFirstSentence?.(full.slice(0,idx).trim())}
+          }
+        }
+      }catch(e){}
+    }
+  }
+  // If no sentence boundary found, send everything
+  if(!sentFirst&&full.trim())onFirstSentence?.(full.trim());
+  return full;
 }
 
 // Audio context - pre-warmed on first interaction
@@ -142,9 +181,15 @@ const stopMic=useCallback(()=>{rR.current?.stop()},[]);
 const send=useCallback(async(text)=>{const t=(text||inp).trim();if(!t||ld)return;setInp("");setTr("");
 primeSpeech();warmAudio();
 const nm=[...ms,{role:"user",content:t}];setMs(nm);setLd(true);setErr(null);
+let ttsStarted=false;
 try{let am=nm.filter(m=>!m.hidden).map(m=>({role:m.role,content:m.content}));if(am[0]?.role==="assistant")am=[{role:"user",content:"(début)"},...am];
-const r=await apiChat(sR.current,am,120);setMs(p=>[...p,{role:"assistant",content:r}]);
-if(voiceMode!=="off"){await doSpeak(r)}}
+const full=await apiChatStream(sR.current,am,120,
+  (partial)=>{setMs([...nm,{role:"assistant",content:partial}])},
+  (firstSentence)=>{if(voiceMode!=="off"&&!ttsStarted){ttsStarted=true;doSpeak(firstSentence)}}
+);
+setMs([...nm,{role:"assistant",content:full}]);
+// If TTS didn't start (no sentence detected), speak full text
+if(voiceMode!=="off"&&!ttsStarted){doSpeak(full)}}
 catch(e){setErr("Erreur de connexion.")}
 setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[inp,ms,ld,voiceMode,voiceIn,doSpeak]);
 
@@ -152,9 +197,14 @@ useEffect(()=>{if(!rec&&tr.trim()&&voiceIn)send(tr.trim())},[rec]);
 
 const start=useCallback(async()=>{primeSpeech();warmAudio();const s=gen();setSc(s);scRef.current=s;setMs([]);setInp("");setErr(null);setDb(null);setTr("");setScr("chat");setLd(true);
 const sp=sysPr(s);sR.current=sp;
-try{const r=await apiChat(sp,[{role:"user",content:"Bonjour, vous vouliez me voir ?"}],300);
-setMs([{role:"user",content:"Bonjour, vous vouliez me voir ?",hidden:true},{role:"assistant",content:r}]);
-if(voiceMode!=="off"){await doSpeak(r,s.voice)}}
+const initMsg={role:"user",content:"Bonjour, vous vouliez me voir ?",hidden:true};
+let ttsStarted=false;
+try{const full=await apiChatStream(sp,[{role:"user",content:"Bonjour, vous vouliez me voir ?"}],300,
+  (partial)=>{setMs([initMsg,{role:"assistant",content:partial}])},
+  (firstSentence)=>{if(voiceMode!=="off"&&!ttsStarted){ttsStarted=true;doSpeak(firstSentence,s.voice)}}
+);
+setMs([initMsg,{role:"assistant",content:full}]);
+if(voiceMode!=="off"&&!ttsStarted){doSpeak(full,s.voice)}}
 catch(e){setErr("Erreur de connexion.")}
 setLd(false);if(!voiceIn)setTimeout(()=>iR.current?.focus(),150)},[voiceMode,voiceIn,doSpeak]);
 
