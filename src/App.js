@@ -301,4 +301,4 @@ return(
 <div style={{textAlign:"center",display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
 <B primary onClick={()=>{setDb(null);start()}}>Nouveau scénario</B>
 <B onClick={()=>{setDb(null);setScr("intro")}}>Accueil</B></div></div></div>)}
-return null}
+return null} 
